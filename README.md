@@ -133,6 +133,7 @@ RHEL 9 w/o Network Scripts use Network Manager
 		- sudo systemctl status libvirtd
 		- lsmod | grep kvm
 	c) Network Bridge Configuration
+	
 		- NIC1 - good
 		- NIC2 - VM Network Bridge
 		- nmcli device status
@@ -147,7 +148,9 @@ RHEL 9 w/o Network Scripts use Network Manager
 			- nmcli connection show
 			- nmcli device status
 			- ip a show br1
+			
 	d) Firewall
+
 		- firewall configuration
 			- sudo firewall-cmd --permanent --add-service=ssh
 			- sudo firewall-cmd --permanent --add-service=libvirt
