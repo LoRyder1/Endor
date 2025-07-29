@@ -175,7 +175,7 @@ Prereq
 	5. LVM setup - leave majority of 2TB RAID 10 disk as unallocated space or as a raw partition /dev/sda4 - you can convert to a Physical Volume
 
 Project Structure
-
+```
 ansible_endor/
 ├── inventory.ini
 ├── ansible.cfg
@@ -194,7 +194,7 @@ ansible_endor/
         │   └── main.yml
         └── defaults/
             └── main.yml
-
+```
 
 inventory.ini
 
