@@ -56,3 +56,105 @@ How to allocate vCPUs, RAM, and storage for Host OS, KVM guest VMs, Kubernetes c
 Use Terraform for IaC and Ansible for configuration management
 
 rocky difference between cloud image and regular image
+
+------------------------------------------------------------------------------------------
+<!-- 
+Example Project:
+Give Refined High-Level Architecture Plan (with Storage Detail, vCPUs, RAM)
+1 physical server, 1 CPU - 32 logical processors, 128GB RAM, 2TB total of virtual disk in RAID 10, 2 NICs. Hardware inventory is final.
+General outline of project - 
+1. RHEL - Host OS - VM on Server. 
+2. using RHEL - KVM and Kubernetes Cluster VMs:
+- 3 control plane nodes
+- 3 worker nodes
+- 2 load balancers
+- for persistent storage use Rook and Ceph
+- 1 Monitoring/Jumpbox node
+- 2 Database RHEL VMs
+How to allocate vCPUs, RAM, and storage for Host OS, KVM guest VMs, Kubernetes cluster, persistent storage, database integration
+Use Terraform for IaC and Ansible for configuration management -->
+
+# Refined High-Level Architecture Plan
+
+- 1 physical server
+- CPU - 32 logical processors - 16 cores with hyperthreading
+- RAM - 128 GB
+- Virtual Disk - RAID 10 - 2 TB
+	- RAID 1 - data is first mirrored, create sets of mirrored pairs
+	- RAID 0 - Striping across mirrored pairs - data striped across pairs
+- Physical NICs - 2
+
+* Infrastructure as code: Terraform for VM provisioning and network setup
+* Ansible for OS configuration and application deployment
+
+
+## Phase 1:
+
+1. Host Operating System - RHEL - KVM Hypervisor
+	- purpose serve as virtualization host for all guest VMs using KVM
+	- vCPUs - 4
+	- RAM - 8 GB
+	- Storage - 100 GB
+
+	a) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
