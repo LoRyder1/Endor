@@ -205,6 +205,7 @@ ansible_endor/
 
 inventory.ini
 
+example
 ```
 [kvm_hosts]
 kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method=sudo ansible_python_interpreter=/usr/bin/python3
@@ -217,6 +218,29 @@ kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method
  kvm_storage_pv_device: /dev/sda4
  kvm_storage_vg_name: vm_data_vg
 ```
+
+## Run this Ansible playbook
+
+1. clone repo
+2. edit inventory.ini replace kvm_host ip
+3. ensure youruser matcher the user created in RHEL install
+4. adjust variables - double check kvm_bridge_physical_nic, kvm_storage_pv_device and other variables in inventory.ini match hardware
+5. run playbook
+```
+ansible-playbook -i inventory.ini playbooks/kvm_host_setup.yml
+```
+
+Expected outcome:
+1. fully updated
+2. time synchronized
+3. firewall configured w/ necessary rules for SSH, libvirt, and the KVM bridge
+4. KVM and libvirt services enabled and running
+5. br1 bridge configured - enslaving your second physical NIC, ready for VMs
+6. vm_data_vg - LVM Volume Group created on you unallocated RAID 10 space, ready for terraform to create logical volumes for your VMs
+7. default virbr0 NAT network disabled
+
+
+
 
 
 
