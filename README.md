@@ -74,6 +74,9 @@ General outline of project - 
 How to allocate vCPUs, RAM, and storage for Host OS, KVM guest VMs, Kubernetes cluster, persistent storage, database integration
 Use Terraform for IaC and Ansible for configuration management -->
 
+* Integrate Satellite or alternative in separate physical/VM - resource intensive
+	- Lifecycle Management - maybe use Foreman/katello
+
 # Refined High-Level Architecture Plan
 
 - 1 physical server
@@ -90,16 +93,126 @@ Use Terraform for IaC and Ansible for configuration management -->
 
 ## Phase 1:
 
-1. Host Operating System - RHEL - KVM Hypervisor
+RHEL 9 w/o Network Scripts use Network Manager
+
+1. Host Operating System - RHEL - KVM Hypervisor - Installation
 	- purpose serve as virtualization host for all guest VMs using KVM
 	- vCPUs - 4
 	- RAM - 8 GB
 	- Storage - 100 GB
 
-	a) 
+	a) hardware virtualization check
+		- grep -E 'vmx|svm' /proc/cpuinfo
+	b) create bootable media w/ minimal install Rocky 9 - CLI only 
+	c) Custom or Manual Partitioning
+		- scheme
+			- /boot - 2GB xfs
+			- / - 50GB
+			- /var - 20 GB
+			- swap - 12 GB
+	d) Software
+		- minimal install
+		- select virtualization host 
+			- will install qemu-kvm, libvirt, virt-install, virt-manager
+	e) hostname
+		- kvm-host-01
+	f) Networking
+		- NIC1 - Management
+			- connect auto
+		- NIC2 - Internal/VM Traffic
+			- do not enable connect automatically
+	g) timezone
+	h) root password, user creation
+	i) security policy - STIGS
+
+2. Post-Installation
+	a) system update
+		- sudo dnf update -y
+		- sudo reboot
+	b) verify kvm installation
+		- sudo systemctl status libvirtd
+		- lsmod | grep kvm
+	c) Network Bridge Configuration
+		- NIC1 - good
+		- NIC2 - VM Network Bridge
+		- nmcli device status
+		- create bridge connetion
+			- sudo nmcli connection add type bridge con-name br1 ifname br1 ipv4.method disabled ipv6.method disabled
+		- add second NIC as a slave to bridge
+			- sudo nmcli connection add type ethernet con-name br1-slave-xxxx ifname xxxx master br1
+		- bring up bridge
+			- sudo nmcli connection up br1
+			- sudo nmcli connection up br1-slave-xxx
+		- verify bridge connection
+			- nmcli connection show
+			- nmcli device status
+			- ip a show br1
+	d) Firewall
+		- firewall configuration
+			- sudo firewall-cmd --permanent --add-service=ssh
+			- sudo firewall-cmd --permanent --add-service=libvirt
+			- sudo firewall-cmd --permanent --add-port=16509/tcp
+			- sudo firewall-cmd --permanent --zone=trusted --add-interface=br1
+			- sudo firewall-cmd --reload
+			
+		- Storage setup for VMs - use LVM
+			- sudo fdisk -l
+			- sudo pvcreate /dev/xxx
+			- sudo vgcreate vm_data_vg /dev/xxx
+		- disable default libvirt NAT - recommended for bridge only setup
+			- sudo virsh net-destroy default
+			- sudo virsh net-autostart --disable default
+			- sudo systemctl enable libvirtd --now
+			
+
+## Ansible: Automating configuration of RHEL Host once installed:
+
+Prereq
+	1. ansible control node
+	2. SSH Access - ansible user
+	3. inventory file configured for host
+	4. Physical NIC Names
+	5. LVM setup - leave majority of 2TB RAID 10 disk as unallocated space or as a raw partition /dev/sda4 - you can convert to a Physical Volume
+
+Project Structure
+
+ansible_endor/
+├── inventory.ini
+├── ansible.cfg
+├── playbooks/ 
+|	└── kvm_host_setup.yml
+└── roles/
+	└── kvm_host/
+		|── tasks/
+		│   ├── main.yml
+        │   ├── system_hardening.yml
+        │   ├── packages.yml
+        │   ├── networking.yml
+        │   ├── kvm_config.yml
+        │   └── storage.yml
+        ├── handlers/
+        │   └── main.yml
+        └── defaults/
+            └── main.yml
 
 
+inventory.ini
 
+[kvm_hosts]
+kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method=sudo ansible_python_interpreter=/usr/bin/python3
+
+[all:vars]
+ - define variables common to all hosts, or specific kvm_hosts group
+ - this is the physical NIC that will be used for the KVM bridge
+ kvm_bridge_physical_nic enp2s0
+ kvm_bridge_name: br1
+ kvm_storage_pv_device: /dev/sda4
+ kvm_storage_vg_name: vm_data_vg
+
+
+------------------------------------------------------------------------
+* is there a way to automate post-installation with scripts or tool?
+ - yes Ansiblize it!
 
 
 
