@@ -1,0 +1,27 @@
+---
+- name: Verify KVM module is loaded
+  ansible.builtin.command: lsmod | grep kvm
+  register: kvm_module_status
+  failed_when: "'kvm_intel' not in kvm_module_status.stdout and 'kvm_amd' not in kvm_module_status.stdout"
+  changed_when: false
+
+- name: Ensure libvirtd service is enabled and running
+  ansible.builtin.systemd:
+    name: libvirtd
+    state: started
+    enabled: yes
+
+- name: Add "{{ ansible_user }}" to libvirt group for non-root management
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: libvirt
+    append: yes
+
+- name: Ensure the libvirt default storage pool is active and autostarted (optional, adjust path if needed)
+  community.libvirt.libvirt_pool:
+    command: create
+    state: active
+    autostart: yes
+    name: default
+    path: /var/lib/libvirt/images
+    type: dir

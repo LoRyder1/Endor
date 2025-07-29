@@ -1,0 +1,38 @@
+---
+- name: Ensure the KVM bridge connection is present and active
+  community.general.nmcli:
+    conn_name: "{{ kvm_bridge_name }}"
+    type: bridge
+    ifname: "{{ kvm_bridge_name }}"
+    state: present
+    ip4: [] # No IP on the bridge itself, VMs will get IPs
+    ip6: []
+    autoconnect: yes
+    # force_replace: yes # Uncomment if you want to ensure it recreates if misconfigured
+
+- name: Ensure the physical NIC is enslaved to the KVM bridge
+  community.general.nmcli:
+    conn_name: "{{ kvm_bridge_name }}-slave-{{ kvm_bridge_physical_nic }}"
+    type: ethernet
+    ifname: "{{ kvm_bridge_physical_nic }}"
+    master: "{{ kvm_bridge_name }}"
+    state: present
+    autoconnect: yes
+    # force_replace: yes
+
+- name: Bring up the bridge slave connection to ensure NIC is attached
+  community.general.nmcli:
+    conn_name: "{{ kvm_bridge_name }}-slave-{{ kvm_bridge_physical_nic }}"
+    state: up
+
+- name: Ensure the bridge itself is up
+  community.general.nmcli:
+    conn_name: "{{ kvm_bridge_name }}"
+    state: up
+
+- name: Disable and destroy default libvirt NAT network (virbr0) if it exists
+  community.libvirt.libvirt_net:
+    command: undefine
+    name: default
+  ignore_errors: yes # Ignore if it's already gone
+  when: ansible_facts['network']['interfaces'] is defined and 'virbr0' in ansible_facts['network']['interfaces']

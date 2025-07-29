@@ -1,0 +1,14 @@
+---
+- name: Ensure LVM physical volume exists on the dedicated device
+  community.general.lvcreate:
+    pv: "{{ kvm_storage_pv_device }}"
+    vg: "{{ kvm_storage_vg_name }}"
+    size: 100%FREE # Use all remaining space for the VG
+    state: present
+    force: yes # Use with caution, ensures it will create/resize if needed.
+
+- name: Verify the LVM Volume Group exists
+  community.general.command: "vgs {{ kvm_storage_vg_name }}"
+  register: vg_check
+  failed_when: vg_check.rc != 0
+  changed_when: false

@@ -1,0 +1,8 @@
+---
+# Default values for role-specific variables
+# Set default values for variables. If defined in inventory.ini or playbooks, those will override these.
+
+# kvm_bridge_physical_nic: enp2s0
+# kvm_bridge_name: br1
+# kvm_storage_pv_device: /dev/sda4
+# kvm_storage_vg_name: vm_data_vg

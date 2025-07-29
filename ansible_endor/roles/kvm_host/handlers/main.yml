@@ -1,0 +1,15 @@
+---
+- name: Reboot if system updated
+  ansible.builtin.reboot:
+    reboot_timeout: 600 # Wait up to 10 minutes for reboot
+  when: dnf_update_result is defined and dnf_update_result.changed
+
+- name: Restart chronyd
+  ansible.builtin.systemd:
+    name: chronyd
+    state: restarted
+
+- name: Reload FirewallD
+  ansible.builtin.systemd:
+    name: firewalld
+    state: reloaded
