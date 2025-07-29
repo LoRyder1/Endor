@@ -1,0 +1,65 @@
+---
+- name: Ensure all packages are updated
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  register: dnf_update_result
+  notify: Reboot if system updated
+
+- name: Ensure dnf-utils is installed (for dnf history rollback)
+  ansible.builtin.dnf:
+    name: dnf-utils
+    state: present
+
+- name: Ensure chrony is installed and running for time synchronization
+  ansible.builtin.dnf:
+    name: chrony
+    state: present
+  notify: Restart chronyd
+
+- name: Configure chrony to use specific NTP servers (optional, but good practice)
+  ansible.builtin.lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^pool '
+    line: 'server 0.rhel.pool.ntp.org iburst' # Or your internal NTP servers
+    insertafter: '^# Please consider joining the pool'
+  notify: Restart chronyd
+
+- name: Ensure required services are enabled and running
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - firewalld
+    - libvirtd # KVM daemon
+    - chronyd
+
+- name: Configure FirewallD: Allow SSH
+  ansible.posix.firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled
+    immediate: yes # Apply changes immediately
+
+- name: Configure FirewallD: Allow libvirt service (for remote virt-manager, virt-install)
+  ansible.posix.firewalld:
+    service: libvirt
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Configure FirewallD: Allow libvirt TLS port (optional, if you use TLS)
+  ansible.posix.firewalld:
+    port: 16509/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Configure FirewallD: Add KVM bridge interface to trusted zone
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: "{{ kvm_bridge_name }}"
+    permanent: yes
+    state: enabled
+    immediate: yes

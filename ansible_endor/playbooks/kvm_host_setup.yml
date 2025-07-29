@@ -1,0 +1,8 @@
+---
+- name: Configure RHEL 9 KVM Host Post-Installation
+  hosts: kvm_hosts
+  become: yes # Run tasks with sudo
+  gather_facts: yes # Gather facts about the host system
+
+  roles:
+    - kvm_host

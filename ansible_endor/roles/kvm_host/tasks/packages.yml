@@ -1,0 +1,23 @@
+---
+- name: Ensure common development tools are installed
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - wget
+      - vim
+      - git
+      - tmux
+      - htop
+      - glances
+      - net-tools # for netstat, ifconfig
+      - policycoreutils-python-utils # for semanage
+      - bridge-utils # for brctl
+    state: present
+
+- name: Ensure virtualization client tools are installed (if not part of virtualization-host)
+  ansible.builtin.dnf:
+    name:
+      - virt-viewer
+      - virt-install
+      - virt-manager
+    state: present

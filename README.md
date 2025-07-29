@@ -126,14 +126,18 @@ RHEL 9 w/o Network Scripts use Network Manager
 	i) security policy - STIGS
 
 2. Post-Installation
+
 	a) system update
+
 		- sudo dnf update -y
 		- sudo reboot
+		
 	b) verify kvm installation
 		- sudo systemctl status libvirtd
 		- lsmod | grep kvm
+		
 	c) Network Bridge Configuration
-	
+
 		- NIC1 - good
 		- NIC2 - VM Network Bridge
 		- nmcli device status
@@ -201,6 +205,7 @@ ansible_endor/
 
 inventory.ini
 
+```
 [kvm_hosts]
 kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method=sudo ansible_python_interpreter=/usr/bin/python3
 
@@ -211,6 +216,8 @@ kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method
  kvm_bridge_name: br1
  kvm_storage_pv_device: /dev/sda4
  kvm_storage_vg_name: vm_data_vg
+```
+
 
 
 ------------------------------------------------------------------------

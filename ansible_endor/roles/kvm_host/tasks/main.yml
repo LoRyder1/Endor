@@ -1,0 +1,17 @@
+---
+- name: Include system hardening tasks
+  ansible.builtin.include_tasks: system_hardening.yml
+
+- name: Include packages installation tasks
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Include networking configuration tasks
+  ansible.builtin.include_tasks: networking.yml
+
+- name: Include KVM specific configuration tasks
+  ansible.builtin.include_tasks: kvm_config.yml
+
+- name: Include storage configuration tasks
+  ansible.builtin.include_tasks: storage.yml
+
+# Add more include_tasks as your needs grow (e.g., monitoring, logging, etc.)
