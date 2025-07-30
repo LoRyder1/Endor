@@ -122,7 +122,7 @@ RHEL 9 w/o Network Scripts use Network Manager
 		- NIC2 - Internal/VM Traffic
 			- do not enable connect automatically
 	g) timezone
-	h) root password, user creation
+	h) root password, user creation - create root, myself-user, and ansible, and terraform
 	i) security policy - STIGS
 
 2. Post-Installation
@@ -240,16 +240,75 @@ Expected outcome:
 6. vm_data_vg - LVM Volume Group created on you unallocated RAID 10 space, ready for terraform to create logical volumes for your VMs
 7. default virbr0 NAT network disabled
 
-
-
-
-
-
 ------------------------------------------------------------------------
 * is there a way to automate post-installation with scripts or tool?
  - yes Ansiblize it!
 
+IP addressing:
 
+1. proper partitioning of Rocky
+2. use ansible 
+3. ROuter
+	- ip addressing pool
+	- 192.168.50.1 - router
+	- .1 -.9 = Home router, gateway, DHCP server, DNS server
+	- .10 - .49 - static ips, managed, Server OOB, Host OS, KVM guests
+	- .100 - .254 - DHCP range - for home devices
+	- 10.42.0.0/16 - kubernetes pod to pod withing K8 cluster
+4. DNS host names
+
+
+IP addressing scheme:
+
+Management Network br0
+192.168.1-30
+	- RHEL Host
+	- Jumpbox Monitoring VM eth0
+	- Server OOB
+VM Network Bridge
+	- 10.10.10.0/24 for VMs - RHEL host, lb, database, K8s
+K8s cluster internal network - pod network
+	- 10.42.0.0/16
+Services network
+	- kubernetes services
+	- 10.43.0.0/16
+
+DNS configuration
+RHEL Host
+	- /etc/resolv.conf to point to router - 192.168.1.1
+ALL KVM guest VMs
+	- /etc/resolv.conf to point to RHEL Host br1 10.10.10.1
+For k8 cluster 
+	- all VMs use CoreDNS service IP
+	- 10.43.0.10
+/etc/hosts
+	- 
+## Phase 2 - Provisioning KVM Vms with Terraform & Configuring with Ansible
+
+### RHEL Host for for Terraform execution
+
+1. install terrafom on host OS and ansible playbook
+
+Manual Steps for Host OS
+
+1. SH Key Generation
+	- ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa.pub
+	- the public key will be injected into VMs
+
+2. Base QCOW2 Image prep
+	- download RHEL Cloud image
+	- move to libvirt image pool
+	- sudo mkdir -p /var/lib/libvirt/images
+	- sudo mv /path/to/image /var/lib/libvirt/images/xxx
+	- install libguestfs-tools for virt-customize
+		- sudo dnf install -y libguestfs-tools
+	- Customize the Base Image
+		- inject your SSH public key for root
+		- ensure cloud-init services are enabled, as Terraform will use cloud-init for initial VM config
+			- sudo virt-customize -a /var/lib/libvirt/images/rhel.qcow2 \
+			- --ssh-inject root:file:/root/.ssh/id_rsa.pub \
+			- --run-command 'systemctl enable cloud-init cloud-init-local cloud-config cloud-final' \
+			- --selinux-relabel
 
 
 

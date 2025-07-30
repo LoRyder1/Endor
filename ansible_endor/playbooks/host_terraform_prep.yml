@@ -1,0 +1,131 @@
+---
+- name: Prepare RHEL Host for Terraform Execution
+  hosts: kvm_host
+  gather_facts: yes # Gathers facts about the remote host, like OS version, which can be useful
+
+  vars:
+    # --- SSH Key Configuration ---
+    # Path where the public key should reside on the remote KVM host (usually /root/.ssh/id_rsa.pub if running as root)
+    remote_ssh_pub_key_path: "/root/.ssh/id_rsa.pub"
+    # Path to your local public key (from where you run Ansible).
+    # This assumes your public key is at ~/.ssh/id_rsa.pub on your local machine.
+    # Adjust if your local key is elsewhere.
+    local_ssh_pub_key_path: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
+
+    # --- Terraform Configuration ---
+    terraform_version: "1.9.0" # Specify the desired Terraform version. Check HashiCorp releases for latest.
+    terraform_install_dir: "/usr/local/bin" # Standard location for custom binaries
+
+    # --- QCOW2 Image Configuration ---
+    # URL to the Rocky Linux 9 Generic Cloud image. Always verify this URL directly
+    # from the official Rocky Linux download pages to ensure it's current.
+    rocky_image_url: "https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-x86_64-latest.qcow2"
+    # The name you want to give the image file on your KVM host.
+    image_name: "rocky-9-base.qcow2"
+    # The directory where libvirt stores VM images.
+    libvirt_images_dir: "/var/lib/libvirt/images"
+    # URL to the checksum file for the Rocky Linux image. This is CRUCIAL for security and integrity.
+    # ALWAYS verify this link and the checksum format from the official Rocky Linux site.
+    rocky_image_checksum_url: "https://download.rockylinux.org/pub/rocky/9/images/x86_64/CHECKSUM"
+
+  tasks:
+    - name: Ensure .ssh directory exists for root on the remote host
+      ansible.builtin.file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+      # This task runs on the remote host (kvm-host-01)
+
+    - name: Copy local SSH public key to the remote kvm-host for root access
+      # This task is delegated to 'localhost' meaning it runs on the machine where Ansible is executed.
+      # It then copies the file to the remote host.
+      ansible.builtin.copy:
+        src: "{{ local_ssh_pub_key_path }}"
+        dest: "{{ remote_ssh_pub_key_path }}"
+        owner: root
+        group: root
+        mode: '0600'
+      delegate_to: localhost
+      run_once: true # Ensures this specific copy task runs only once, even if multiple hosts are in 'kvm_host' group
+      # Add a condition to skip if the local public key does not exist.
+      # This makes the playbook more robust if run on environments without the key pre-generated.
+      when: local_ssh_pub_key_path is file # checks if the local_ssh_pub_key_path actually exists as a file
+
+    - name: Ensure libguestfs-tools is installed for virt-customize
+      ansible.builtin.dnf:
+        name: libguestfs-tools
+        state: present
+
+    - name: Create libvirt images directory if it doesn't exist
+      ansible.builtin.file:
+        path: "{{ libvirt_images_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download Rocky Linux 9 cloud image if not present
+      ansible.builtin.get_url:
+        url: "{{ rocky_image_url }}"
+        dest: "{{ libvirt_images_dir }}/{{ image_name }}"
+        mode: '0644'
+        # Using a checksum URL ensures integrity and automatically downloads the checksum for validation.
+        # This is the most secure way to ensure the downloaded file is not corrupted or tampered with.
+        checksum: "sha256:{{ rocky_image_checksum_url }}"
+        # This prevents re-downloading the file if it already exists and its checksum matches.
+        # If the file exists but checksum doesn't match, it will re-download.
+
+    - name: Customize the Rocky Linux base image with SSH key and enable cloud-init
+      # This command modifies the QCOW2 image directly.
+      # 'creates' ensures it only runs once by checking for a sentinel file (or directory).
+      # However, virt-customize might not create a new file or directory, it modifies in-place.
+      # For idempotent customization, consider a separate "sentinel file" touch after success
+      # or manage custom image versions more rigorously.
+      # For initial run, this is sufficient.
+      ansible.builtin.command: >
+        virt-customize -a {{ libvirt_images_dir }}/{{ image_name }}
+        --ssh-inject root:file:{{ remote_ssh_pub_key_path }}
+        --run-command 'systemctl enable cloud-init cloud-init-local cloud-config cloud-final'
+        --selinux-relabel
+      args:
+        # Check if a marker file exists. If it does, skip customization (assumed already done).
+        # This is a simple form of idempotency for external commands.
+        creates: "{{ libvirt_images_dir }}/{{ image_name }}.customized.marker"
+      changed_when: false # virt-customize often exits 0 even if no changes, so we mark it as no change.
+      # Add a post-command to create the marker file upon successful customization.
+      notify: Create image customized marker
+
+    - name: Download and install Terraform
+      # Downloads the Terraform zip archive.
+      ansible.builtin.unarchive:
+        src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
+        dest: "/tmp"
+        remote_src: yes # Tells Ansible to download the file directly on the remote host
+      # The 'creates' argument makes this task idempotent based on the presence of the extracted binary.
+      args:
+        creates: "/tmp/terraform"
+
+    - name: Move Terraform binary to install directory
+      # Copies the extracted Terraform binary to a standard PATH location.
+      ansible.builtin.copy:
+        src: "/tmp/terraform"
+        dest: "{{ terraform_install_dir }}/terraform"
+        mode: '0755' # Make it executable
+        remote_src: yes # Source is on the remote host (from /tmp)
+      # The 'creates' argument makes this task idempotent.
+      args:
+        creates: "{{ terraform_install_dir }}/terraform"
+
+    - name: Verify Terraform installation
+      # Confirms that Terraform is correctly installed and accessible in the PATH.
+      ansible.builtin.command: terraform version
+      changed_when: false # This command does not change system state
+
+  handlers:
+    # Handler to create a marker file after successful image customization.
+    # This makes the virt-customize task idempotent.
+    - name: Create image customized marker
+      ansible.builtin.file:
+        path: "{{ libvirt_images_dir }}/{{ image_name }}.customized.marker"
+        state: touch
+        mode: '0644'
