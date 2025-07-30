@@ -226,6 +226,7 @@ kvm-host-01 ansible_host=KVM_HOST_IP ansible_user=youruser ansible_become_method
 3. ensure youruser matcher the user created in RHEL install
 4. adjust variables - double check kvm_bridge_physical_nic, kvm_storage_pv_device and other variables in inventory.ini match hardware
 5. run playbook
+
 ```
 ansible-playbook -i inventory.ini playbooks/kvm_host_setup.yml
 ```
