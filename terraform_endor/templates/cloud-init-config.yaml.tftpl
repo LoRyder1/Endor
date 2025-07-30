@@ -1,0 +1,47 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.yourdomain.local # Adjust yourdomain.local
+preserve_hostname: false
+
+# Configure network using static IP
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      addresses:
+        - ${eth0_ip}/24
+      gateway4: ${eth0_gateway}
+      nameservers:
+        addresses: ${jsonencode(nameservers)}
+%if eth1_ip != ""
+    eth1:
+      dhcp4: false
+      addresses:
+        - ${eth1_ip}/24
+      gateway4: ${eth1_gateway} # Note: Only one default gateway can be active. Ensure routing is correct.
+      nameservers:
+        addresses: ${jsonencode(nameservers)}
+%endif
+
+# SSH public key for root user
+ssh_authorized_keys:
+  - ${ssh_public_key}
+
+# Optional: Set a default user if needed, though root with SSH key is often sufficient for initial setup
+# users:
+#   - name: youruser
+#     sudo: ALL=(ALL) NOPASSWD:ALL
+#     groups: users, admin
+#     shell: /bin/bash
+#     ssh_authorized_keys:
+#       - ${ssh_public_key}
+
+# Update packages on first boot
+# packages_update: true
+# packages_upgrade: true
+
+# Run commands on first boot
+runcmd:
+  - echo "Cloud-init finished on ${hostname}" | tee /var/log/cloud-init-finished.log
+  - [ sh, -xc, "systemctl enable --now sshd || true" ] # Ensure SSH is running
