@@ -149,51 +149,19 @@ General outline of project - 
 2. using RHEL - KVM and Kubernetes Cluster VMs:
 
 - 3 control plane nodes
-
 - 3 worker nodes
-
 - 2 load balancers
-
 - for persistent storage use Rook and Ceph
-
 - 1 Monitoring/Jumpbox node
-
 - 2 Database RHEL VMs
 
 allocate vCPUs, RAM, and storage for Host OS, KVM guest VMs, Kubernetes cluster, persistent storage, database integration
 
 Use Terraform for IaC and Ansible for configuration management
 
-
-
 * Integrate Satellite or alternative in separate physical/VM - resource intensive
-
 - Lifecycle Management - maybe use Foreman/katello
-
-
-
-# Refined High-Level Architecture Plan
-
-
-
-- 1 physical server
-
-- CPU - 32 logical processors - 16 cores with hyperthreading
-
-- RAM - 128 GB
-
-- Virtual Disk - RAID 10 - 2 TB
-
-- RAID 1 - data is first mirrored, create sets of mirrored pairs
-
-- RAID 0 - Striping across mirrored pairs - data striped across pairs
-
-- Physical NICs - 2
-
-
-
 * Infrastructure as code: Terraform for VM provisioning and network setup
-
 * Ansible for OS configuration and application deployment
 
 Ansible script already run for configuration of RHEL Host once manually installed
@@ -205,30 +173,19 @@ outcomes:
 playbook 1 outcome:
 
 1. fully updated
-
 2. time synchronized
-
 3. firewall configured w/ necessary rules for SSH, libvirt, and the KVM bridge
-
 4. KVM and libvirt services enabled and running
-
 5. br1 bridge configured - enslaving your second physical NIC, ready for VMs
-
 6. vm_data_vg - LVM Volume Group created on you unallocated RAID 10 space, ready for terraform to create logical volumes for your VMs
-
 7. default virbr0 NAT network disabled
 
 Playblook2 outcome:
 
 1. ssh public key available for virt-customize
-
 2. libguestfs-tools installed
-
 3. RHEL cloud image downloaded and customized with SSH key and cloud-init
-
 4. terraform installed in /usr/local/bin
-
-
 
 What are next steps in terms of using Terraform to provision infrastructure for Kubnernetes cluster, give detailed and specific scripts and directory layout
 
@@ -237,27 +194,16 @@ What are next steps in terms of using Terraform to provision infrastructure for 
 Output scripts again with IP addressing scheme for network and VM ip address scheme that needs to be configured:
 
 Management Network br0
-
 192.168.1-30
-
 - RHEL Host
-
 - Jumpbox Monitoring VM eth0
-
 - Server OOB
-
 VM Network Bridge
-
 - 10.10.10.0/24 for VMs - RHEL host, lb, database, K8s
-
 K8s cluster internal network - pod network
-
 - 10.42.0.0/16
-
 Services network
-
 - kubernetes services
-
 - 10.43.0.0/16
 
 ```
