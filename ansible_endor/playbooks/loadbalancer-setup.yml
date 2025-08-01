@@ -1,0 +1,88 @@
+---
+- name: Setup HAProxy and Keepalived for Kubernetes API
+  hosts: load_balancers
+  become: yes
+  vars:
+    # Virtual IP for the Kubernetes API
+    kubernetes_api_vip: "10.10.10.100"
+
+  tasks:
+    - name: Install HAProxy and Keepalived
+      ansible.builtin.yum:
+        name:
+          - haproxy
+          - keepalived
+        state: present
+      tags:
+        - install
+
+    - name: Configure HAProxy
+      ansible.builtin.template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart haproxy
+      tags:
+        - haproxy_config
+
+    - name: Configure Keepalived
+      ansible.builtin.template:
+        src: templates/keepalived.conf.j2
+        dest: /etc/keepalived/keepalived.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart keepalived
+      tags:
+        - keepalived_config
+
+    - name: Enable and start HAProxy service
+      ansible.builtin.service:
+        name: haproxy
+        state: started
+        enabled: yes
+      tags:
+        - services
+
+    - name: Enable and start Keepalived service
+      ansible.builtin.service:
+        name: keepalived
+        state: started
+        enabled: yes
+      tags:
+        - services
+
+    # ----------------------------------
+    # Verification
+    # ----------------------------------
+    - name: Wait for Keepalived to elect a master
+      ansible.builtin.pause:
+        seconds: 10
+      tags:
+        - verify
+
+    - name: Check which node is the Keepalived master
+      ansible.builtin.command: ip addr show dev br1
+      register: ip_addr_output
+      changed_when: false
+      tags:
+        - verify
+
+    - name: Display IP address information
+      ansible.builtin.debug:
+        var: ip_addr_output.stdout_lines
+      tags:
+        - verify
+
+  handlers:
+    - name: Restart haproxy
+      ansible.builtin.service:
+        name: haproxy
+        state: restarted
+
+    - name: Restart keepalived
+      ansible.builtin.service:
+        name: keepalived
+        state: restarted

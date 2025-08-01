@@ -1,0 +1,184 @@
+---
+- name: Setup Monitoring Stack (Prometheus & Grafana)
+  hosts: jumpbox
+  become: yes
+  vars:
+    # Prometheus Variables
+    prometheus_version: "2.44.0"
+    prometheus_dir: "/usr/local/bin"
+    prometheus_user: "prometheus"
+    prometheus_group: "prometheus"
+    prometheus_config_dir: "/etc/prometheus"
+    prometheus_data_dir: "/var/lib/prometheus"
+    
+    # Grafana Variables
+    grafana_api_key: "your_secure_api_key" # In production, use Ansible Vault
+    grafana_api_url: "http://localhost:3000"
+
+  tasks:
+    # ----------------------------------
+    # Section 1: Prometheus Installation
+    # ----------------------------------
+    - name: Create Prometheus system user and group
+      ansible.builtin.user:
+        name: "{{ prometheus_user }}"
+        state: present
+        system: yes
+        shell: /sbin/nologin
+        group: "{{ prometheus_group }}"
+      tags:
+        - prometheus
+
+    - name: Create Prometheus directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0755'
+      loop:
+        - "{{ prometheus_config_dir }}"
+        - "{{ prometheus_data_dir }}"
+      tags:
+        - prometheus
+
+    - name: Download and extract Prometheus
+      ansible.builtin.unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+      tags:
+        - prometheus
+
+    - name: Copy Prometheus binaries to /usr/local/bin
+      ansible.builtin.copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "{{ prometheus_dir }}/"
+        remote_src: yes
+        mode: '0755'
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+      loop:
+        - prometheus
+        - promtool
+      tags:
+        - prometheus
+
+    - name: Copy Prometheus consoles and console_libraries to config directory
+      ansible.builtin.copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "{{ prometheus_config_dir }}/"
+        remote_src: yes
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0755'
+      loop:
+        - consoles
+        - console_libraries
+      tags:
+        - prometheus
+
+    - name: Configure Prometheus prometheus.yml
+      ansible.builtin.template:
+        src: templates/prometheus.yml.j2
+        dest: "{{ prometheus_config_dir }}/prometheus.yml"
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0644'
+      notify: Restart prometheus
+      tags:
+        - prometheus
+
+    - name: Create Prometheus systemd service file
+      ansible.builtin.template:
+        src: templates/prometheus.service.j2
+        dest: "/etc/systemd/system/prometheus.service"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+      tags:
+        - prometheus
+
+    - name: Start and enable Prometheus service
+      ansible.builtin.systemd:
+        name: prometheus
+        state: started
+        enabled: yes
+      tags:
+        - prometheus
+
+    # ----------------------------------
+    # Section 2: Grafana Installation and Configuration
+    # ----------------------------------
+    - name: Add Grafana Yum repository
+      ansible.builtin.yum_repository:
+        name: grafana
+        description: Grafana
+        baseurl: https://rpm.grafana.com
+        gpgcheck: yes
+        gpgkey: https://rpm.grafana.com/gpg.key
+        enabled: yes
+      tags:
+        - grafana
+
+    - name: Install Grafana
+      ansible.builtin.yum:
+        name: grafana
+        state: present
+      tags:
+        - grafana
+
+    - name: Start and enable Grafana service
+      ansible.builtin.systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+      tags:
+        - grafana
+
+    - name: Wait for Grafana to be available
+      ansible.builtin.uri:
+        url: "{{ grafana_api_url }}"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 5
+      changed_when: false
+      tags:
+        - grafana
+
+    - name: Configure Prometheus data source in Grafana
+      ansible.builtin.uri:
+        url: "{{ grafana_api_url }}/api/datasources"
+        method: POST
+        body_format: json
+        body:
+          name: Prometheus
+          type: prometheus
+          url: "http://localhost:9090"
+          isDefault: true
+        headers:
+          Authorization: "Bearer {{ grafana_api_key }}"
+        status_code: 200
+      register: grafana_datasource_result
+      tags:
+        - grafana
+
+    - name: Display Grafana datasource configuration result
+      ansible.builtin.debug:
+        var: grafana_datasource_result
+      tags:
+        - grafana
+
+  handlers:
+    - name: Restart prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: reloaded

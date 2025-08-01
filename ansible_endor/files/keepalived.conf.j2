@@ -1,0 +1,30 @@
+# This is a template for keepalived.conf
+# This file will be managed by Ansible. Do not edit manually.
+
+global_defs {
+    router_id {{ inventory_hostname }}
+}
+
+vrrp_script chk_haproxy {
+    script "killall -0 haproxy"   # Check for the HAProxy process
+    interval 2
+    weight 20
+}
+
+vrrp_instance VI_1 {
+    state {{ 'MASTER' if inventory_hostname == groups['load_balancers'][0] else 'BACKUP' }}
+    interface br1                 # The network interface on the VM Network Bridge
+    virtual_router_id 51
+    priority {{ 101 if inventory_hostname == groups['load_balancers'][0] else 100 }}
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass mysecret
+    }
+    virtual_ipaddress {
+        10.10.10.100/24             # The Virtual IP for the Kubernetes API
+    }
+    track_script {
+        chk_haproxy
+    }
+}

@@ -1,0 +1,17 @@
+# This is a template for prometheus.yml
+# This file will be managed by Ansible. Do not edit manually.
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'kubernetes_control_plane'
+    static_configs:
+      - targets:
+        {% for node in groups['kubernetes_control_plane'] %}
+        - '{{ hostvars[node]['ansible_host'] }}:9100'  # Assuming node exporter port
+        {% endfor %}
