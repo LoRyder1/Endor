@@ -35,3 +35,15 @@ Configure the load balancers (e.g., using HAProxy or Keepalived) to distribute t
 
 ## Monitoring Playbook:
 Use Ansible to install and configure monitoring tools (e.g., Prometheus and Grafana) on the Jumpbox/Monitoring VM.
+
+
+### Kubernetes Config playbook
+	- inventory.ini - is ready
+	- ansible_user - has passwordless sudo configured, as per the cloud-init script
+	
+	- running playbook 
+		- ansible-playbook - inventory2.ini kubernetes-setup.yml
+
+### Rook and Ceph
+
+	- ansible-playbook -i inventory2.ini roock-seph-setup.yml

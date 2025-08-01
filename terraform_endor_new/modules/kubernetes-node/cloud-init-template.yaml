@@ -1,0 +1,25 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.local
+manage_etc_hosts: true
+
+# Set up user
+users:
+  - name: cloud-user
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+# Set up network configuration
+network:
+  version: 2
+  ethernets:
+    nic1:
+      dhcp4: false
+      addresses:
+        - ${ip_address}/24
+      gateway4: 10.10.10.1
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]

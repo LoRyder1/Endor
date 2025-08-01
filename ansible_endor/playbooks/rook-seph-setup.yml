@@ -1,0 +1,85 @@
+---
+- name: Deploy Rook and Ceph for Persistent Storage
+  hosts: kubernetes_control_plane[0] # Run on the first control plane node
+  become: yes
+  vars:
+    # URL and version for Rook/Ceph manifests
+    rook_version: "v1.12.0" # Use a specific version for stability
+    rook_base_url: "https://raw.githubusercontent.com/rook/rook/release-{{ rook_version }}/deploy/examples"
+
+  tasks:
+    - name: Create a temporary directory for Rook manifests
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: rook-manifests
+      register: temp_dir
+
+    - name: Download Rook/Ceph manifests
+      ansible.builtin.get_url:
+        url: "{{ item.url }}"
+        dest: "{{ temp_dir.path }}/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { url: "{{ rook_base_url }}/crds.yaml", dest: "crds.yaml" }
+        - { url: "{{ rook_base_url }}/common.yaml", dest: "common.yaml" }
+        - { url: "{{ rook_base_url }}/operator.yaml", dest: "operator.yaml" }
+        - { url: "{{ rook_base_url }}/cluster.yaml", dest: "cluster.yaml" }
+        - { url: "{{ rook_base_url }}/filesystem.yaml", dest: "filesystem.yaml" }
+        - { url: "{{ rook_base_url }}/storageclass.yaml", dest: "storageclass.yaml" }
+        # Note: The block storage manifests are now included in storageclass.yaml and common.yaml
+      tags:
+        - download_manifests
+
+    - name: Deploy Rook CRDs and common resources
+      ansible.builtin.command: kubectl apply -f "{{ temp_dir.path }}/{{ item }}"
+      become_user: cloud-user
+      loop:
+        - "crds.yaml"
+        - "common.yaml"
+      tags:
+        - deploy_operator
+
+    - name: Deploy the Rook Operator
+      ansible.builtin.command: kubectl apply -f "{{ temp_dir.path }}/operator.yaml"
+      become_user: cloud-user
+      tags:
+        - deploy_operator
+      
+    - name: Wait for the Rook Operator to be ready
+      ansible.builtin.command: kubectl -n rook-ceph rollout status deploy/rook-ceph-operator
+      register: result
+      until: result.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+      tags:
+        - deploy_operator
+
+    - name: Deploy the Ceph cluster
+      ansible.builtin.command: kubectl apply -f "{{ temp_dir.path }}/cluster.yaml"
+      become_user: cloud-user
+      tags:
+        - deploy_cluster
+      
+    - name: Wait for the Ceph cluster to be ready
+      ansible.builtin.command: kubectl -n rook-ceph get cephcluster my-ceph-cluster -o jsonpath='{.status.ceph.health}'
+      register: ceph_health
+      until: ceph_health.stdout == 'HEALTH_OK' or ceph_health.stdout == 'HEALTH_WARN'
+      retries: 60
+      delay: 10
+      changed_when: false
+      tags:
+        - deploy_cluster
+
+    - name: Create the StorageClass
+      ansible.builtin.command: kubectl apply -f "{{ temp_dir.path }}/storageclass.yaml"
+      become_user: cloud-user
+      tags:
+        - create_storageclass
+
+    - name: Clean up temporary manifest files
+      ansible.builtin.file:
+        path: "{{ temp_dir.path }}"
+        state: absent
+      tags:
+        - cleanup
