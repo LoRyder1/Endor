@@ -1,0 +1,12 @@
+# This is a template for postgresql.conf
+# This file will be managed by Ansible. Do not edit manually.
+
+listen_addresses = '{{ ansible_host }}'
+port = 5432
+max_connections = 100
+wal_level = replica
+hot_standby = on
+archive_mode = on
+archive_command = 'cp %p /var/lib/pgsql/data/archive/%f'
+max_wal_senders = 5
+max_replication_slots = 5

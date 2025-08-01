@@ -1,0 +1,12 @@
+# This is a template for pg_hba.conf
+# This file will be managed by Ansible. Do not edit manually.
+
+# Local connections
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            scram-sha-256
+
+# Connections from the Kubernetes VM network
+host    all             all             10.10.10.0/24           scram-sha-256
+
+# Replication connections from the replica node
+host    replication     replicator      {{ hostvars[groups['database'][1]]['ansible_host'] }}/32  scram-sha-256

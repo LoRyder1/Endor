@@ -47,3 +47,6 @@ Use Ansible to install and configure monitoring tools (e.g., Prometheus and Graf
 ### Rook and Ceph
 
 	- ansible-playbook -i inventory2.ini roock-seph-setup.yml
+
+### Database Config playbook
+	- ansible-playbook -i inventory2.ini postgres-setup.yml
