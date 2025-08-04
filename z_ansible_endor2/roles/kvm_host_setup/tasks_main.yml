@@ -1,0 +1,23 @@
+---
+- name: Install virtualization packages
+  ansible.builtin.dnf:
+    name:
+      - "@Virtualization Host"
+      - python3-libvirt
+      - libvirt-python
+    state: present
+
+- name: Ensure libvirtd service is running and enabled
+  ansible.builtin.systemd:
+    name: libvirtd
+    state: started
+    enabled: yes
+
+- name: Configure network bridge for VMs
+  ansible.builtin.command:
+    cmd: >
+      nmcli con add type bridge con-name br0 ifname br0;
+      nmcli con add type bridge-slave con-name {{ physical_nic }} ifname {{ physical_nic }} master br0;
+      nmcli con modify br0 ipv4.addresses {{ host_ip }}/24 ipv4.method manual;
+      nmcli con up br0
+  failed_when: false

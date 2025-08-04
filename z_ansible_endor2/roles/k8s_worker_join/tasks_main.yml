@@ -1,0 +1,6 @@
+---
+- name: Run the kubeadm join command on worker nodes
+  ansible.builtin.command: "{{ lookup('file', '/tmp/kube_join_command.sh') }}"
+  become: yes
+  # Note: The `lookup` here assumes the file was saved to the control node.
+  # A better way would be to pass the `join_command` as a variable from the control plane play.

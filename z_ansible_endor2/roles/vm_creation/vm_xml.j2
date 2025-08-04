@@ -1,0 +1,28 @@
+<domain type='kvm'>
+  <name>{{ item.name }}</name>
+  <memory unit='MiB'>{{ item.ram }}</memory>
+  <vcpu placement='static'>{{ item.vcpu }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-6.2'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/{{ item.name }}.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+      <backingStore type='file' index='1'>
+        <driver name='qemu' type='qcow2'/>
+        <source file='/var/lib/libvirt/images/rhel9.qcow2'/>
+      </backingStore>
+    </disk>
+    <interface type='bridge'>
+      <source bridge='br0'/>
+      <model type='virtio'/>
+      <ip address='{{ item.ip_address }}' prefix='24'/>
+    </interface>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+  </devices>
+</domain>

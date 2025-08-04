@@ -1,0 +1,20 @@
+---
+# Variables for kvm_host_setup role
+physical_nic: "eth0"
+host_ip: "192.168.1.100"
+
+# Variables for vm_creation role
+vm_definitions:
+  - name: k8s-control-plane
+    vcpu: 2
+    ram: 4096
+    disk_size: 20
+    ip_address: 192.168.1.200
+  - name: k8s-worker-1
+    vcpu: 2
+    ram: 2048
+    disk_size: 20
+    ip_address: 192.168.1.201
+
+# Variables for Kubernetes setup
+pod_network_cidr: "10.244.0.0/16"

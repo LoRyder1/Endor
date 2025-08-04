@@ -1,0 +1,20 @@
+---
+- name: Copy RHEL 9 VM base image
+  ansible.builtin.copy:
+    src: "files/rhel9.qcow2"
+    dest: "/var/lib/libvirt/images/rhel9.qcow2"
+  # This assumes you have a `files/` directory in your playbook root with the image.
+
+- name: Create VMs from template
+  community.libvirt.virt:
+    name: "{{ item.name }}"
+    command: create
+    xml: "{{ lookup('template', 'vm_xml.j2') }}"
+  loop: "{{ vm_definitions }}"
+
+- name: Add created VMs to Ansible inventory for next plays
+  ansible.builtin.add_host:
+    name: "{{ item.name }}"
+    groups: "k8s_nodes"
+    ansible_host: "{{ item.ip_address }}"
+  loop: "{{ vm_definitions }}"
