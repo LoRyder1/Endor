@@ -1,0 +1,39 @@
+---
+# Variables for kvm_host_setup role
+physical_nic: "eth0"
+host_ip: "192.168.1.100"
+
+# Variables for vm_creation role
+vm_definitions:
+  # Control Plane Nodes
+  - name: k8s-control-plane-1
+    vcpu: 2
+    ram: 4096
+    disk_size: 20
+    ip_address: 192.168.1.200
+  - name: k8s-control-plane-2
+    vcpu: 2
+    ram: 4096
+    disk_size: 20
+    ip_address: 192.168.1.201
+  - name: k8s-control-plane-3
+    vcpu: 2
+    ram: 4096
+    disk_size: 20
+    ip_address: 192.168.1.202
+  # Worker Nodes
+  - name: k8s-worker-1
+    vcpu: 2
+    ram: 2048
+    disk_size: 20
+    ip_address: 192.168.1.203
+  - name: k8s-worker-2
+    vcpu: 2
+    ram: 2048
+    disk_size: 20
+    ip_address: 192.168.1.204
+
+# Variables for Kubernetes setup
+pod_network_cidr: "10.244.0.0/16"
+# The IP address for the control plane load balancer
+control_plane_lb_ip: "192.168.1.250"

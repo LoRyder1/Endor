@@ -1,0 +1,33 @@
+---
+- name: Copy RHEL 9 VM base image
+  ansible.builtin.copy:
+    src: "files/rhel9.qcow2"
+    dest: "/var/lib/libvirt/images/rhel9.qcow2"
+
+- name: Create VMs from template
+  community.libvirt.virt:
+    name: "{{ item.name }}"
+    command: create
+    xml: "{{ lookup('template', 'vm_xml.j2') }}"
+  loop: "{{ vm_definitions }}"
+
+- name: Add created VMs to Ansible inventory for next plays
+  ansible.builtin.add_host:
+    name: "{{ item.name }}"
+    groups: "k8s_nodes"
+    ansible_host: "{{ item.ip_address }}"
+  loop: "{{ vm_definitions }}"
+
+- name: Add control plane VMs to the k8s_control_plane group
+  ansible.builtin.add_host:
+    name: "{{ item.name }}"
+    groups: "k8s_control_plane"
+  loop: "{{ vm_definitions }}"
+  when: "'control-plane' in item.name"
+
+- name: Add worker VMs to the k8s_workers group
+  ansible.builtin.add_host:
+    name: "{{ item.name }}"
+    groups: "k8s_workers"
+  loop: "{{ vm_definitions }}"
+  when: "'worker' in item.name"

@@ -1,0 +1,12 @@
+---
+- name: Get join command from first control plane node
+  ansible.builtin.shell: >
+    kubeadm token create --print-join-command
+  register: join_command_output
+  delegate_to: k8s-control-plane-1
+  run_once: true
+
+- name: Run the kubeadm join command on worker nodes
+  ansible.builtin.command: "{{ join_command_output.stdout | replace('192.168.1.200:6443', control_plane_lb_ip + ':6443') }}"
+  become: yes
+  # The replace is a simple way to change the join address.
