@@ -158,4 +158,64 @@
 	- split by log type or data source for clarity and lifecycle control
 		- os logs, kvm_logs, k8s_logs, metrics, security_logs
 
-## 
+## Retention and Sizing
+	
+	- define retention per index using froenTimePeriodInSecs
+		- use summary indexing or data models with acceleration for long-term analytics
+
+## Ingestion and Data Collection Strategy
+
+	- Universal Forwarder - lightweight, preferred for endpoints
+	- Heavy Forwarder - for parsing and filtering data before ingestion
+	- API and HEC (HTTP Event Collector) - ideal for cloud-native or container logs
+		- Examples
+			- RHEL - UF
+			- KVM logs - UF
+			- Kubernetes - HEC + Fluentd/Fluent Bit
+			- Metrics - Collectd + UF or OpenTelemetry 
+
+## Configuration Best Practices
+
+	- Input and Output
+		- use inputs.conf to define what logs to collect
+		- use props.conf and transforms.conf for field extraction and sourcetype normalization
+			- example specific sourcetypes
+				- rhel:syslog
+				- kvm:qemu
+				- k8s:pod
+				- metrics:host
+
+## Security and Access Control
+
+	- Plan for RBAC and secure communication
+		- TLS between forwarders and indexers
+		- use hardened inputs - restric source IPs
+		- configure roles and access via authorize.conf
+
+## High Availability and Scaling
+
+	- Indexers
+		- use indexer clustering with replication factor = 2
+		- set search factor = 2 for redundancy
+	- Search Heads
+		- use search head cluster (3+ nodes)
+		- requires deployer node
+	- Storage
+		- SSD for hot/warm buckets
+		- NFS or object storage for cold/frozen
+
+## Monitoring Splunk Itself
+
+	- install Splunk Monitoring Console
+		- monitor indexing queues
+		- view search concurrency
+		- track forwarder connection health
+		- identify skipped or blocked data
+
+### Example Splunk Topology
+
+	- 3 physical servers - indexers
+	- 1 physical server - search head
+	- 1 physical server - Control plane server
+		- roles combined
+			- cluster, license master, deployment server, monitoring console
