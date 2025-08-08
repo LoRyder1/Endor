@@ -96,3 +96,66 @@
 	7. Parse and structure logs
 	8. Secure the stack
 	9. Monitor ELK itself
+
+# Index and Shard Strategy
+
+## Decide Indexing Strategy based on Use Case
+
+	- Data type
+	- Component
+	- Time
+## Plan Number and Size of Shards
+
+	- Example
+		- 20 GB/day of system logs from 10 servers
+		- you keep logs for 30 days
+		- 1 primary and 1 replica per daily index
+		Then
+			- 30 indices x 1 primary shard = 30 primary shards
+			- 30 indices x 1 replica = 30 replica
+			- Total - 60 shards -> very manageable
+
+## Use Index Templates and ILM Policies
+
+	- create index templates
+	- ILM
+		- roll over indices
+		- move to warm/cold nodes
+		- delete old indices
+
+## Align Query Patterns with Index Design
+	
+	- avoid querying too many indices at once
+	- use index aliases
+
+## Use Aliases and Rollovers for Log Streams
+
+	- use filebeat or logstash to write to logs-system-wrie and let ILM manage rollovers
+
+## Monitor your shard health
+	
+	- watch for:
+		- unassigned shards
+		- frequent shard relocations
+		- high heap pressure on Elasticsearch nodes
+
+
+# Splunk Architecture and Design
+
+## Estimate Log Volume
+## Plan Splunk Architecture
+
+	- FOr clustered architecture
+		- large production environment
+			1. Deployment Server
+			2. 2+ INdexers - distributed
+			3. 1 Search Head
+			4. 1 License Master
+			5. 1 Heavy Forwarder
+
+## Index and Data Management Strategy
+	
+	- split by log type or data source for clarity and lifecycle control
+		- os logs, kvm_logs, k8s_logs, metrics, security_logs
+
+## 
