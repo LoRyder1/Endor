@@ -219,3 +219,4 @@
 	- 1 physical server - Control plane server
 		- roles combined
 			- cluster, license master, deployment server, monitoring console
+
