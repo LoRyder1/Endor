@@ -42,5 +42,21 @@
 
 ## Initialize the Cluster
 	- kubeadm init
-	- configure for the root user
-	
+	- configure kubectl for the root user
+
+## Join Remaining Nodes
+
+	- on control plane nodes 2 & 3
+	- sudo kubeadm join k8s-cluster.example.com:6443 --token <token> \
+	- sudo kubeadm join k8s-cluster.example.com:6443 --token <token> \
+
+## Install a Pod Network - CNI
+
+	- kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+	- verify pods
+		- kubectl get nodes
+		- kubectl get pods -A
+
+
+		
